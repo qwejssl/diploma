@@ -44,7 +44,6 @@ export function NewReportPage() {
 	function handleSubmit(e: React.FormEvent) {
 		e.preventDefault()
 
-		// пока просто логируем — позже свяжем с backend
 		console.log({
 			category,
 			title,
@@ -204,7 +203,6 @@ export function NewReportPage() {
 						</select>
 					</div>
 
-					{/* Фото добавим позже, когда подойдём к загрузке файлов */}
 
 					<button
 						type='submit'
@@ -225,7 +223,6 @@ export function NewReportPage() {
 					</button>
 				</form>
 
-				{/* Мини‑карта для выбора точки */}
 				<div
 					style={{
 						height: 420,

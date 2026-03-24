@@ -1,67 +1,76 @@
 // src/pages/IssuesPage.tsx
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-type MockIssue = {
+type Issue = {
 	id: number
 	title: string
 	category: string
-	district: string
-	status: 'New' | 'In progress' | 'Completed' | 'Rejected'
-	priority: 'Low' | 'Medium' | 'High'
-	votes: number
+	status: string // enum из БД: NEW, IN_PROGRESS, ...
+	address: string
 	updatedAt: string
 }
 
-const mockIssues: MockIssue[] = [
-	{
-		id: 1,
-		title: 'Broken streetlight near Sea Garden',
-		category: 'Lighting',
-		district: 'Sea Garden',
-		status: 'New',
-		priority: 'High',
-		votes: 12,
-		updatedAt: '2026-03-21',
-	},
-	{
-		id: 2,
-		title: 'Potholes on main road',
-		category: 'Roads',
-		district: 'Asparuhovo',
-		status: 'In progress',
-		priority: 'Medium',
-		votes: 34,
-		updatedAt: '2026-03-20',
-	},
-	{
-		id: 3,
-		title: 'Overflowing trash containers',
-		category: 'Waste',
-		district: 'Central Varna',
-		status: 'Completed',
-		priority: 'High',
-		votes: 20,
-		updatedAt: '2026-03-18',
-	},
-]
-
-function statusColor(status: MockIssue['status']) {
+function statusColor(status: Issue['status']) {
 	switch (status) {
-		case 'New':
+		case 'NEW':
 			return '#2563eb'
-		case 'In progress':
+		case 'IN_PROGRESS':
 			return '#f97316'
-		case 'Completed':
+		case 'COMPLETED':
 			return '#16a34a'
-		case 'Rejected':
+		case 'REJECTED':
 			return '#6b7280'
 		default:
 			return '#6b7280'
 	}
 }
 
+function statusLabel(status: Issue['status']) {
+	switch (status) {
+		case 'NEW':
+			return 'New'
+		case 'IN_PROGRESS':
+			return 'In progress'
+		case 'COMPLETED':
+			return 'Completed'
+		case 'REJECTED':
+			return 'Rejected'
+		default:
+			return status
+	}
+}
+
 export function IssuesPage() {
 	const navigate = useNavigate()
+
+	const [issues, setIssues] = useState<Issue[]>([])
+	const [loading, setLoading] = useState(true)
+	const [error, setError] = useState<string | null>(null)
+
+	useEffect(() => {
+		async function loadIssues() {
+			try {
+				setLoading(true)
+				setError(null)
+
+				const res = await fetch('http://localhost:4000/issues')
+				if (!res.ok) {
+					throw new Error(`Request failed: ${res.status}`)
+				}
+
+				const data = await res.json()
+				setIssues(data)
+			} catch (e) {
+				console.error(e)
+				setError('Failed to load issues from server')
+			} finally {
+				setLoading(false)
+			}
+		}
+
+		loadIssues()
+	}, [])
 
 	return (
 		<div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -81,174 +90,144 @@ export function IssuesPage() {
 					color: '#4b5563',
 				}}
 			>
-				Browse reported issues. Later this list will be loaded from the backend
-				with filters and search.
+				These issues are loaded from the real PostgreSQL database through the
+				backend API.
 			</p>
 
-			{/* Панель фильтров (пока только визуально) */}
-			<div
-				style={{
-					display: 'flex',
-					gap: 16,
-					marginBottom: 16,
-					flexWrap: 'wrap',
-				}}
-			>
-				<select
-					style={{
-						padding: '8px 12px',
-						borderRadius: 999,
-						border: '1px solid #d1d5db',
-						backgroundColor: '#ffffff',
-					}}
-					defaultValue=''
-				>
-					<option value=''>All categories</option>
-					<option value='Roads'>Roads</option>
-					<option value='Lighting'>Lighting</option>
-					<option value='Waste'>Waste</option>
-				</select>
+			{loading && <p>Loading issues...</p>}
+			{error && <p style={{ color: 'red' }}>{error}</p>}
 
-				<select
-					style={{
-						padding: '8px 12px',
-						borderRadius: 999,
-						border: '1px solid #d1d5db',
-						backgroundColor: '#ffffff',
-					}}
-					defaultValue=''
-				>
-					<option value=''>All statuses</option>
-					<option value='New'>New</option>
-					<option value='In progress'>In progress</option>
-					<option value='Completed'>Completed</option>
-				</select>
-
-				<input
-					type='text'
-					placeholder='Search by title or street...'
-					style={{
-						flex: '1 1 220px',
-						minWidth: 220,
-						padding: '8px 12px',
-						borderRadius: 999,
-						border: '1px solid #d1d5db',
-						backgroundColor: '#ffffff',
-					}}
-				/>
-			</div>
-
-			{/* Таблица заявок */}
-			<div
-				style={{
-					borderRadius: 24,
-					overflow: 'hidden',
-					backgroundColor: '#ffffff',
-					boxShadow: '0 18px 45px rgba(15,30,60,0.08)',
-				}}
-			>
-				<table
-					style={{
-						width: '100%',
-						borderCollapse: 'collapse',
-						fontSize: 14,
-					}}
-				>
-					<thead
+			{!loading && !error && (
+				<>
+					<div
 						style={{
-							backgroundColor: '#f3f4f6',
-							textAlign: 'left',
+							display: 'flex',
+							gap: 16,
+							marginBottom: 16,
+							flexWrap: 'wrap',
 						}}
 					>
-						<tr>
-							<th style={{ padding: '12px 16px' }}>Title</th>
-							<th style={{ padding: '12px 16px' }}>Category</th>
-							<th style={{ padding: '12px 16px' }}>District</th>
-							<th style={{ padding: '12px 16px' }}>Status</th>
-							<th style={{ padding: '12px 16px' }}>Priority</th>
-							<th style={{ padding: '12px 16px' }}>Votes</th>
-							<th style={{ padding: '12px 16px' }}>Last updated</th>
-						</tr>
-					</thead>
-					<tbody>
-						{mockIssues.map(issue => (
-							<tr
-								key={issue.id}
-								style={{ cursor: 'pointer' }}
-								onClick={() => navigate(`/issues/${issue.id}`)}
+						{/* здесь позже сделаем настоящие фильтры */}
+					</div>
+
+					<button
+						onClick={() => navigate('/issues/new')}
+						style={{
+							marginBottom: 16,
+							padding: '8px 16px',
+							borderRadius: 999,
+							border: 'none',
+							background: 'linear-gradient(90deg,#06b6d4,#2563eb)',
+							color: '#ffffff',
+							fontWeight: 600,
+							cursor: 'pointer',
+						}}
+					>
+						Create issue
+					</button>
+
+					<div
+						style={{
+							borderRadius: 24,
+							overflow: 'hidden',
+							backgroundColor: '#ffffff',
+							boxShadow: '0 18px 45px rgba(15,30,60,0.08)',
+						}}
+					>
+						<table
+							style={{
+								width: '100%',
+								borderCollapse: 'collapse',
+								fontSize: 14,
+							}}
+						>
+							<thead
+								style={{
+									backgroundColor: '#f3f4f6',
+									textAlign: 'left',
+								}}
 							>
-								<td
-									style={{
-										padding: '10px 16px',
-										borderTop: '1px solid #e5e7eb',
-									}}
-								>
-									{issue.title}
-								</td>
-								<td
-									style={{
-										padding: '10px 16px',
-										borderTop: '1px solid #e5e7eb',
-									}}
-								>
-									{issue.category}
-								</td>
-								<td
-									style={{
-										padding: '10px 16px',
-										borderTop: '1px solid #e5e7eb',
-									}}
-								>
-									{issue.district}
-								</td>
-								<td
-									style={{
-										padding: '10px 16px',
-										borderTop: '1px solid #e5e7eb',
-									}}
-								>
-									<span
-										style={{
-											padding: '4px 10px',
-											borderRadius: 999,
-											backgroundColor: statusColor(issue.status) + '20',
-											color: statusColor(issue.status),
-											fontWeight: 500,
-											fontSize: 12,
-										}}
-									>
-										{issue.status}
-									</span>
-								</td>
-								<td
-									style={{
-										padding: '10px 16px',
-										borderTop: '1px solid #e5e7eb',
-									}}
-								>
-									{issue.priority}
-								</td>
-								<td
-									style={{
-										padding: '10px 16px',
-										borderTop: '1px solid #e5e7eb',
-									}}
-								>
-									{issue.votes}
-								</td>
-								<td
-									style={{
-										padding: '10px 16px',
-										borderTop: '1px solid #e5e7eb',
-									}}
-								>
-									{issue.updatedAt}
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+								<tr>
+									<th style={{ padding: '12px 16px' }}>Title</th>
+									<th style={{ padding: '12px 16px' }}>Category</th>
+									<th style={{ padding: '12px 16px' }}>Status</th>
+									<th style={{ padding: '12px 16px' }}>Last updated</th>
+								</tr>
+							</thead>
+							<tbody>
+								{issues.length === 0 ? (
+									<tr>
+										<td
+											colSpan={4}
+											style={{
+												padding: '12px 16px',
+												textAlign: 'center',
+												borderTop: '1px solid #e5e7eb',
+											}}
+										>
+											No issues yet
+										</td>
+									</tr>
+								) : (
+									issues.map(issue => (
+										<tr
+											key={issue.id}
+											style={{ cursor: 'pointer' }}
+											onClick={() => navigate(`/issues/${issue.id}`)}
+										>
+											<td
+												style={{
+													padding: '10px 16px',
+													borderTop: '1px solid #e5e7eb',
+												}}
+											>
+												{issue.title}
+											</td>
+											<td
+												style={{
+													padding: '10px 16px',
+													borderTop: '1px solid #e5e7eb',
+												}}
+											>
+												{issue.category}
+											</td>
+											<td
+												style={{
+													padding: '10px 16px',
+													borderTop: '1px solid #e5e7eb',
+												}}
+											>
+												<span
+													style={{
+														padding: '4px 10px',
+														borderRadius: 999,
+														backgroundColor: statusColor(issue.status) + '20',
+														color: statusColor(issue.status),
+														fontWeight: 500,
+														fontSize: 12,
+													}}
+												>
+													{statusLabel(issue.status)}
+												</span>
+											</td>
+											<td
+												style={{
+													padding: '10px 16px',
+													borderTop: '1px solid #e5e7eb',
+												}}
+											>
+												{issue.updatedAt
+													? new Date(issue.updatedAt).toLocaleDateString()
+													: '—'}
+											</td>
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
+					</div>
+				</>
+			)}
 		</div>
 	)
 }
